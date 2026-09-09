@@ -1,0 +1,164 @@
+.network-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  color: #3171b8;
+  --wire: #7d9bb8;
+  --node-line: #9bb5cf;
+  --node-icon: #245386;
+  --node-label: #415e7c;
+  --request: #1467d4;
+  --response: #b06824;
+}
+.network-backdrop > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.network-backdrop .node-highlight {
+  stop-color: #fff;
+}
+.network-backdrop .node-shadow {
+  stop-color: #dce8f3;
+}
+.network-wire-shadow {
+  fill: none;
+  stroke: #abc2d9;
+  stroke-width: 8;
+  opacity: 0.12;
+}
+.network-wire {
+  fill: none;
+  stroke: var(--wire);
+  stroke-width: 1.3;
+}
+.node-outer-ring {
+  fill: none;
+  stroke: var(--node-line);
+  stroke-width: 0.8;
+  opacity: 0.7;
+}
+.node-shell {
+  stroke: var(--node-line);
+  stroke-width: 1.2;
+}
+.network-node > svg {
+  color: var(--node-icon);
+}
+.network-node text {
+  fill: var(--node-label);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+.network-packet {
+  fill: var(--request);
+  offset-rotate: auto;
+  animation-name: packet-journey;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+.network-running .network-packet {
+  animation-play-state: running;
+}
+.packet-glow {
+  filter: url(#packet-light);
+  opacity: 0.75;
+}
+.network-key {
+  position: absolute;
+  top: 140px;
+  right: 7%;
+  display: flex;
+  gap: 20px;
+  color: var(--node-label);
+  font-size: 12px;
+}
+.network-key span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.network-key i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--request);
+}
+.network-key span + span i {
+  background: var(--response);
+}
+@keyframes packet-journey {
+  0% {
+    offset-distance: 0%;
+    fill: var(--request);
+  }
+  49.99% {
+    fill: var(--request);
+  }
+  50% {
+    fill: var(--response);
+  }
+  100% {
+    offset-distance: 100%;
+    fill: var(--response);
+  }
+}
+[data-theme='dark'] .network-backdrop {
+  color: #6cb2f5;
+  --wire: #547698;
+  --node-line: #53799e;
+  --node-icon: #bddeff;
+  --node-label: #a5bfda;
+  --request: #8dceff;
+  --response: #efbd7a;
+}
+[data-theme='dark'] .network-backdrop .node-highlight {
+  stop-color: #2e4f70;
+}
+[data-theme='dark'] .network-backdrop .node-shadow {
+  stop-color: #101e30;
+}
+[data-theme='dark'] .network-wire-shadow {
+  stroke: #5288bd;
+  opacity: 0.13;
+}
+@media (prefers-reduced-motion: reduce) {
+  .network-packet {
+    animation: none;
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .network-backdrop > svg {
+    opacity: 0.55;
+  }
+  .network-key {
+    display: none;
+  }
+}
+.network-backdrop {
+  --wire: #547596;
+  --node-line: #789cbe;
+  --node-icon: #214f82;
+}
+.network-backdrop .node-shadow {
+  stop-color: #bacfe3;
+}
+.network-wire {
+  stroke-width: 1.6;
+}
+.network-wire-shadow {
+  opacity: 0.2;
+}
+[data-theme='dark'] .network-backdrop {
+  --wire: #6589af;
+  --node-line: #648eb6;
+}
+@media (max-width: 800px) {
+  .network-backdrop > svg {
+    opacity: 0.9;
+  }
+}
