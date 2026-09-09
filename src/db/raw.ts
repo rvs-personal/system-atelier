@@ -2,11 +2,23 @@ import { createClient, type Client, type InValue } from '@libsql/client';
 let client: Client | undefined;
 export function databaseClient() {
   if (!client) {
-    const url = process.env.DATABASE_URL;
+    const url =
+      process.env.DATABASE_URL ||
+      process.env.DATABASE_TURSO_DATABASE_URL ||
+      process.env.TURSO_DATABASE_URL;
     if (!url) throw new Error('DATABASE_URL is required');
-    if (process.env.VERCEL && !/^(libsql|https):\/\//.test(url))
+    if (
+      process.env.VERCEL &&
+      !['libsql:', 'https:'].includes(new URL(url).protocol)
+    )
       throw new Error('Vercel requires a remote persistent database');
-    client = createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN });
+    client = createClient({
+      url,
+      authToken:
+        process.env.DATABASE_AUTH_TOKEN ||
+        process.env.DATABASE_TURSO_AUTH_TOKEN ||
+        process.env.TURSO_AUTH_TOKEN,
+    });
   }
   return client;
 }
