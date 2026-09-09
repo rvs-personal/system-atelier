@@ -42,3 +42,12 @@ test('body limit measures actual stream bytes even without a content length', as
   await assert.rejects(() => readBounded(request('abcd'), 3));
   await assert.rejects(() => readBounded(request('éé'), 3));
 });
+
+test('public AI access requires an explicit server flag and a real account', () => {
+  assert.equal(inferenceAllowed('account-a', undefined, 'true'), true);
+  assert.equal(inferenceAllowed('account-a', undefined, 'false'), false);
+  assert.equal(inferenceAllowed('account-a', undefined, 'TRUE'), false);
+  assert.equal(inferenceAllowed('account-a', '*'), false);
+  assert.equal(inferenceAllowed('', undefined, 'true'), false);
+  assert.equal(inferenceAllowed('  ', undefined, 'true'), false);
+});

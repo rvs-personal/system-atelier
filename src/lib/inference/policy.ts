@@ -1,7 +1,10 @@
 export function inferenceAllowed(
   accountId: string,
   allowed: string | undefined,
+  publicAccess?: string,
 ) {
+  if (!accountId.trim()) return false;
+  if (publicAccess === 'true') return true;
   return !!allowed
     ?.split(',')
     .map((s) => s.trim().toLowerCase())

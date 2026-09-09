@@ -14,7 +14,11 @@ export async function inferenceAccess(request: Request) {
     };
   if (
     settings().INFERENCE_ENABLED !== 'true' ||
-    !inferenceAllowed(user.id, settings().INFERENCE_ACCOUNT_IDS)
+    !inferenceAllowed(
+      user.id,
+      settings().INFERENCE_ACCOUNT_IDS,
+      settings().INFERENCE_PUBLIC_ENABLED,
+    )
   )
     return {
       response: json(
@@ -43,7 +47,9 @@ export async function inferenceAccess(request: Request) {
       response: json(
         { error: 'Please wait a minute before requesting another review.' },
         429,
-        { 'Retry-After': '60' },
+        {
+          'Retry-After': '60',
+        },
       ),
     };
   return { user };

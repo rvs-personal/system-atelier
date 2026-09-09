@@ -32,7 +32,11 @@ export async function GET(request: Request) {
       !!settings().CURSOR_API_KEY &&
       settings().INFERENCE_ENABLED === 'true' &&
       !!user &&
-      inferenceAllowed(user.id, settings().INFERENCE_ACCOUNT_IDS),
+      inferenceAllowed(
+        user.id,
+        settings().INFERENCE_ACCOUNT_IDS,
+        settings().INFERENCE_PUBLIC_ENABLED,
+      ),
     provider: 'Cursor cloud inference',
     routineModel: 'claude-sonnet-5',
     criticalModel: 'claude-opus-5',
