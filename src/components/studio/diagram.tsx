@@ -1,9 +1,8 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Download, Maximize2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { graphDot, type Design } from '@/lib/studio/model';
 import type { CanvasAction } from '@/lib/studio/canvas-actions';
-import { download } from '@/lib/studio/storage';
 let engine:
   | Promise<Awaited<ReturnType<(typeof import('@viz-js/viz'))['instance']>>>
   | undefined;
@@ -26,7 +25,13 @@ export default function Diagram({
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
     [zoom, setZoom] = useState(1);
-  const dot = graphDot(design, hot, !!onAction);
+  const callbacks = useRef({ onSelect, onAction });
+  useLayoutEffect(() => {
+    callbacks.current = { onSelect, onAction };
+  });
+  const interactive = !!onAction,
+    selectable = !!onSelect;
+  const dot = graphDot(design, hot, interactive);
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -37,79 +42,140 @@ export default function Diagram({
         const svg = v.renderSVGElement(dot);
         svg.removeAttribute('width');
         svg.removeAttribute('height');
-        svg.setAttribute('role', 'img');
+        svg.setAttribute('role', interactive || selectable ? 'group' : 'img');
         svg.setAttribute(
           'aria-label',
           'Architecture diagram. ' + design.nodes.map((n) => n.name).join(', '),
         );
         for (const node of design.nodes) {
           const g = svg.querySelector('[id="node-' + node.id + '"]');
-          if (g && onSelect) {
+          if (g && selectable) {
             g.setAttribute('tabindex', '0');
             g.setAttribute('role', 'button');
             g.setAttribute('aria-label', 'Inspect ' + node.name);
-            g.addEventListener('click', () => onSelect(node.id));
+            g.addEventListener('click', () =>
+              callbacks.current.onSelect?.(node.id),
+            );
             g.addEventListener('keydown', (e) => {
               if (
                 (e as KeyboardEvent).key === 'Enter' ||
                 (e as KeyboardEvent).key === ' '
               ) {
                 e.preventDefault();
-                onSelect(node.id);
+                callbacks.current.onSelect?.(node.id);
               }
             });
           }
         }
+        const focusedAction = ref.current.contains(document.activeElement)
+          ? document.activeElement?.getAttribute('data-node-action')
+          : null;
         ref.current.replaceChildren(svg);
-        if (onAction)
+        if (interactive)
           for (const n of design.nodes) {
             const g = svg.querySelector(
               '[id="node-' + n.id + '"]',
             ) as SVGGElement | null;
             if (!g) continue;
             const box = g.getBBox();
-            const fo = document.createElementNS(
+            const scalable = [
+              'service',
+              'database',
+              'cache',
+              'worker',
+            ].includes(n.kind);
+            const actions: CanvasAction[] = scalable
+              ? ['minus', 'plus', 'remove']
+              : ['remove'];
+            const width = actions.length * 36 + (actions.length - 1) * 8;
+            // Keep controls in the SVG coordinate system so visual and pointer
+            // positions agree at every zoom level. Siblings avoid nested buttons.
+            const row = document.createElementNS(
               'http://www.w3.org/2000/svg',
-              'foreignObject',
+              'g',
             );
-            fo.setAttribute('x', String(box.x + 8));
-            fo.setAttribute('y', String(box.y + box.height - 42));
-            fo.setAttribute('width', String(box.width - 16));
-            fo.setAttribute('height', '36');
-            const row = document.createElement('div');
-            row.className = 'node-actions';
-            for (const [action, title] of [
-              ['minus', '−'],
-              ['plus', '+'],
-              ['remove', '×'],
-            ] as const) {
-              if (
-                action !== 'remove' &&
-                !['service', 'database', 'cache', 'worker'].includes(n.kind)
-              )
-                continue;
-              const b = document.createElement('button');
-              b.textContent = title;
-              b.setAttribute(
-                'aria-label',
+            row.setAttribute(
+              'transform',
+              `translate(${box.x + (box.width - width) / 2},${box.y + box.height - 42})`,
+            );
+            actions.forEach((action, index) => {
+              const b = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'g',
+              );
+              const disabled =
+                action === 'minus'
+                  ? n.replicas <= 1
+                  : action === 'plus' && n.replicas >= 100;
+              const label =
                 (action === 'plus'
                   ? 'Add a copy of '
                   : action === 'minus'
                     ? 'Remove one copy of '
-                    : 'Delete ') + n.name,
+                    : 'Delete ') + n.name;
+              b.setAttribute(
+                'class',
+                'node-action' +
+                  (action === 'remove' ? ' node-action-remove' : ''),
               );
-              b.title = b.getAttribute('aria-label')!;
-              b.disabled = action === 'minus' && n.replicas <= 1;
-              b.onclick = (e) => {
+              b.setAttribute('transform', `translate(${index * 44},0)`);
+              b.setAttribute('role', 'button');
+              b.setAttribute('tabindex', disabled ? '-1' : '0');
+              b.setAttribute('aria-label', label);
+              b.setAttribute('aria-disabled', String(disabled));
+              b.setAttribute('data-node-action', n.id + ':' + action);
+              const title = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'title',
+              );
+              title.textContent = label;
+              const rect = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'rect',
+              );
+              for (const [key, value] of Object.entries({
+                width: '36',
+                height: '36',
+                rx: '7',
+              }))
+                rect.setAttribute(key, value);
+              const text = document.createElementNS(
+                'http://www.w3.org/2000/svg',
+                'text',
+              );
+              text.setAttribute('x', '18');
+              text.setAttribute('y', '18');
+              text.setAttribute('text-anchor', 'middle');
+              text.setAttribute('dominant-baseline', 'central');
+              text.textContent =
+                action === 'plus' ? '+' : action === 'minus' ? '−' : '×';
+              b.append(title, rect, text);
+              b.addEventListener('click', (e) => {
                 e.stopPropagation();
-                onAction(n.id, action);
-              };
-              b.onkeydown = (e) => e.stopPropagation();
+                if (!disabled) callbacks.current.onAction?.(n.id, action);
+              });
+              b.addEventListener('keydown', (event) => {
+                const e = event as KeyboardEvent;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!disabled && !e.repeat)
+                    callbacks.current.onAction?.(n.id, action);
+                }
+              });
               row.appendChild(b);
-            }
-            fo.appendChild(row);
-            g.appendChild(fo);
+            });
+            g.parentElement?.appendChild(row);
           }
+        if (focusedAction) {
+          const target = Array.from(
+            svg.querySelectorAll<SVGGElement>('[data-node-action]'),
+          ).find(
+            (node) => node.getAttribute('data-node-action') === focusedAction,
+          );
+          if (target?.getAttribute('aria-disabled') === 'false')
+            target.focus({ preventScroll: true });
+        }
         setError('');
         setLoading(false);
       })
@@ -125,7 +191,7 @@ export default function Diagram({
     return () => {
       active = false;
     };
-  }, [dot, onSelect, onAction]);
+  }, [dot, selectable, interactive]);
   return (
     <div className={'diagram ' + (compact ? 'compact' : '')}>
       <div className="diagram-corner">

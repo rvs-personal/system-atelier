@@ -5253,3 +5253,37 @@ html[data-theme='dark'] .notebook-fab:hover {
     flex-direction: column;
   }
 }
+
+/* Inline canvas actions share the diagram's SVG transform and hit area. */
+.node-action {
+  cursor: pointer;
+  outline: none;
+}
+.node-action rect {
+  fill: #e8f0ff;
+  stroke: #718fc1;
+  stroke-width: 1.2;
+  pointer-events: all;
+}
+.node-action text {
+  fill: #203f73;
+  font: 700 22px system-ui;
+  pointer-events: none;
+  user-select: none;
+}
+.node-action-remove rect {
+  fill: #4c2c2d;
+  stroke: #ba7776;
+}
+.node-action-remove text {
+  fill: #ffd4cb;
+}
+.node-action[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: default;
+}
+.node-action:not([aria-disabled='true']):hover rect,
+.node-action:focus-visible rect {
+  stroke: #a9c6ff;
+  stroke-width: 3;
+}
