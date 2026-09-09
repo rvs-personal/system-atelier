@@ -11,12 +11,45 @@ export function inferenceAllowed(
     .filter(Boolean)
     .includes(accountId.toLowerCase());
 }
-export const inferenceLimits = {
-  accountDaily: 40,
-  siteDaily: 200,
-  criticalDaily: 2,
-  requestsPerMinute: 6,
-};
+export const creditsExhaustedMessage =
+  'Sorry, AI credits are exhausted. Please try again later.';
+export class CreditsExhaustedError extends Error {
+  constructor() {
+    super(creditsExhaustedMessage);
+  }
+}
+export function creditsExhausted(status: number, payload: unknown): boolean {
+  if (status === 402) return true;
+  if (!payload || typeof payload !== 'object') return false;
+  const data = payload as Record<string, unknown>;
+  const error = data.error;
+  const detail =
+    error && typeof error === 'object'
+      ? (error as Record<string, unknown>)
+      : data;
+  const text = [
+    typeof error === 'string' ? error : '',
+    detail.code,
+    detail.type,
+    detail.message,
+    detail.reason,
+  ]
+    .filter((x): x is string => typeof x === 'string')
+    .join(' ')
+    .toLowerCase();
+  return /insufficient[_ -](?:credits?|quota|balance)|(?:credits?|balance)[_ -](?:exhausted|depleted)|(?:out of|no remaining)[_ -]credits?|credit balance is too low|billing[_ -]hard[_ -]limit[_ -]reached/.test(
+    text,
+  );
+}
+export async function providerFailure(
+  response: Response,
+  prefix: string,
+): Promise<Error> {
+  const detail: unknown = await response.json().catch(() => null);
+  return creditsExhausted(response.status, detail)
+    ? new CreditsExhaustedError()
+    : new Error(prefix + ' HTTP ' + response.status);
+}
 export async function readBounded(request: Request, maxBytes: number) {
   if (Number(request.headers.get('content-length')) > maxBytes)
     throw new Error('Request too large');

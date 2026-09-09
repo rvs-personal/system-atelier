@@ -1,7 +1,7 @@
 import { env } from '@/lib/server-env';
-import { account, json, sameOrigin, limitKey } from '@/lib/auth/server';
+import { account, json, sameOrigin } from '@/lib/auth/server';
 import { database } from '@/db/raw';
-import { inferenceAllowed, inferenceLimits } from './policy';
+import { inferenceAllowed } from './policy';
 export const settings = () => env as unknown as Record<string, string>;
 export async function inferenceAccess(request: Request) {
   if (!sameOrigin(request))
@@ -36,46 +36,7 @@ export async function inferenceAccess(request: Request) {
         503,
       ),
     };
-  if (
-    !(await limitKey(
-      'model-minute:' + user.id,
-      inferenceLimits.requestsPerMinute,
-      60,
-    ))
-  )
-    return {
-      response: json(
-        { error: 'Please wait a minute before requesting another review.' },
-        429,
-        {
-          'Retry-After': '60',
-        },
-      ),
-    };
   return { user };
-}
-export async function reserveModelBudget(userId: string, critical: boolean) {
-  // All model endpoints share these server-owned limits. Reject conservatively;
-  // failed calls still count because the provider may already have incurred cost.
-  if (
-    !(await limitKey(
-      'model-day:' + userId,
-      inferenceLimits.accountDaily,
-      86400,
-    )) ||
-    !(await limitKey('model-day:site', inferenceLimits.siteDaily, 86400))
-  )
-    return false;
-  if (
-    critical &&
-    !(await limitKey(
-      'model-critical:' + userId,
-      inferenceLimits.criticalDaily,
-      86400,
-    ))
-  )
-    return false;
-  return true;
 }
 export async function acquireModelLock(userId: string) {
   const key = 'model-user:' + userId,

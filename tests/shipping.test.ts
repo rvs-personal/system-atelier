@@ -2,7 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parentRoute } from '../src/lib/studio/navigation';
 import { lldLibrary } from '../src/lib/studio/lld-library';
-import { inferenceAllowed, readBounded } from '../src/lib/inference/policy';
+import {
+  inferenceAllowed,
+  readBounded,
+  creditsExhausted,
+  providerFailure,
+  CreditsExhaustedError,
+} from '../src/lib/inference/policy';
 test('contextual back paths do not trap incidents or expose raw history IDs', () => {
   assert.equal(parentRoute('learn/request'), 'learn');
   assert.equal(parentRoute('lld/practice/lru'), 'lld/practice');
@@ -50,4 +56,36 @@ test('public AI access requires an explicit server flag and a real account', () 
   assert.equal(inferenceAllowed('account-a', '*'), false);
   assert.equal(inferenceAllowed('', undefined, 'true'), false);
   assert.equal(inferenceAllowed('  ', undefined, 'true'), false);
+});
+
+test('provider credit exhaustion is distinct from outages and rate throttling', async () => {
+  assert.equal(creditsExhausted(402, null), true);
+  assert.equal(
+    creditsExhausted(429, { error: { code: 'insufficient_quota' } }),
+    true,
+  );
+  assert.equal(
+    creditsExhausted(0, { error: { message: 'Credit balance is too low' } }),
+    true,
+  );
+  assert.equal(
+    creditsExhausted(429, { error: { code: 'rate_limit_exceeded' } }),
+    false,
+  );
+  assert.equal(
+    creditsExhausted(500, { error: 'Internal server error' }),
+    false,
+  );
+  assert.equal(creditsExhausted(0, { result: 'Credits exhausted' }), false);
+  assert.ok(
+    (await providerFailure(
+      new Response('not json', { status: 402 }),
+      'Inference',
+    )) instanceof CreditsExhaustedError,
+  );
+  assert.equal(
+    (await providerFailure(new Response('{}', { status: 404 }), 'Inference'))
+      .message,
+    'Inference HTTP 404',
+  );
 });

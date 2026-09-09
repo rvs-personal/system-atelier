@@ -2,13 +2,19 @@ export const runtime = 'nodejs';
 export const maxDuration = 240;
 import {
   inferenceAccess,
-  reserveModelBudget,
   acquireModelLock,
   releaseModelLock,
 } from '@/lib/inference/access';
-import { inferenceAllowed, readBounded } from '@/lib/inference/policy';
+import {
+  inferenceAllowed,
+  readBounded,
+  CreditsExhaustedError,
+  creditsExhausted,
+  creditsExhaustedMessage,
+  providerFailure,
+} from '@/lib/inference/policy';
 import { minimumInterviewBrief } from '@/lib/studio/interview-brief';
-import { account, limitKey, sameOrigin, json } from '@/lib/auth/server';
+import { account, sameOrigin, json } from '@/lib/auth/server';
 import { digest } from '@/lib/auth/crypto';
 import { database } from '@/db/raw';
 import { env } from '@/lib/server-env';
@@ -53,7 +59,7 @@ async function cursor(path: string, body?: unknown, timeout = 25000) {
     ...(body ? { body: JSON.stringify(body) } : {}),
     signal: AbortSignal.timeout(timeout),
   });
-  if (!r.ok) throw new Error('Inference HTTP ' + r.status);
+  if (!r.ok) throw await providerFailure(r, 'Inference');
   return r.json() as Promise<any>;
 }
 export async function POST(request: Request) {
@@ -150,6 +156,7 @@ export async function POST(request: Request) {
     try {
       previous = await cursor('agents/' + agentId);
     } catch (error) {
+      if (error instanceof CreditsExhaustedError) throw error;
       if (!(error instanceof Error) || error.message !== 'Inference HTTP 404')
         throw error;
     }
@@ -177,11 +184,6 @@ export async function POST(request: Request) {
     )
       runId = previous.latestRunId;
     if (!runId) {
-      if (!(await reserveModelBudget(user.id, critical)))
-        return json(
-          { error: 'Daily model allowance reached. Your work is saved.' },
-          429,
-        );
       await database()
         .prepare(
           'UPDATE inference_sessions SET job_id=?,run_id=?,previous_run_id=? WHERE id=? AND lease=?',
@@ -220,6 +222,7 @@ export async function POST(request: Request) {
           runId = r.run?.id ?? '';
         }
       } catch (error) {
+        if (error instanceof CreditsExhaustedError) throw error;
         console.warn(
           'Interview start awaiting reconciliation',
           error instanceof Error ? error.message : 'unknown',
@@ -234,7 +237,9 @@ export async function POST(request: Request) {
           const a = await cursor('agents/' + agentId);
           if (a.latestRunId && a.latestRunId !== baseline)
             runId = a.latestRunId;
-        } catch {}
+        } catch (error) {
+          if (error instanceof CreditsExhaustedError) throw error;
+        }
         if (!runId) await pause(1500);
       }
     }
@@ -253,6 +258,7 @@ export async function POST(request: Request) {
       try {
         run = await cursor('agents/' + agentId + '/runs/' + runId);
       } catch (error) {
+        if (error instanceof CreditsExhaustedError) throw error;
         console.warn(
           'Interview result retry',
           error instanceof Error ? error.message : 'unknown',
@@ -292,8 +298,10 @@ export async function POST(request: Request) {
           .run();
         return json(reply);
       }
-      if (['ERROR', 'CANCELLED', 'EXPIRED'].includes(run.status))
+      if (['ERROR', 'CANCELLED', 'EXPIRED'].includes(run.status)) {
+        if (creditsExhausted(0, run)) throw new CreditsExhaustedError();
         throw new Error('Run failed');
+      }
       await pause(1200);
     }
     return json(
@@ -304,6 +312,11 @@ export async function POST(request: Request) {
       504,
     );
   } catch (error) {
+    if (error instanceof CreditsExhaustedError)
+      return json(
+        { error: creditsExhaustedMessage, code: 'AI_CREDITS_EXHAUSTED' },
+        503,
+      );
     console.error('Interview inference failed', {
       stage,
       reason: error instanceof Error ? error.message : 'unknown',
