@@ -1,4 +1,5 @@
 'use client';
+import { LabTourInvitation } from './lab-tour';
 import { useEffect, useState } from 'react';
 import {
   ArrowRight,
@@ -204,6 +205,7 @@ export default function Operations() {
       <CloudStatus {...cloud} />
       {step === 0 ? (
         <>
+          <LabTourInvitation />
           <div className="incident-library-toolbar">
             <label>
               <span>Category</span>

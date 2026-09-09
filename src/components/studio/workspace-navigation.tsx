@@ -16,6 +16,7 @@ const labels: Record<string, string> = {
   session: 'Current interview',
   history: 'Past interviews',
   simulations: 'Interactive workbenches',
+  tour: 'Guided tour',
   load: 'Request capacity',
   queue: 'Queue arithmetic',
   quorum: 'Quorum thresholds',

@@ -19,6 +19,7 @@ import { useCloud, download } from '@/lib/studio/storage';
 import { CloudStatus, PageTitle, Range, ExportButton } from './shared';
 import Editor from './editor';
 import Operations from './operations';
+import LabTour from './lab-tour';
 import ExperimentStory from './experiment-story';
 export default function Lab() {
   const cloud = useCloud('architecture', {
@@ -52,7 +53,7 @@ export default function Lab() {
       const [area, target] = location.hash.slice(1).split('/');
       if (area === 'lab')
         setTab(
-          ['load', 'queue', 'quorum', 'estimate'].includes(target)
+          ['tour', 'load', 'queue', 'quorum', 'estimate'].includes(target)
             ? target
             : 'production',
         );
@@ -123,6 +124,7 @@ export default function Lab() {
             onChange={(e) => openTab(e.target.value)}
           >
             <option value="production">On-call incidents</option>
+            <option value="tour">Guided tour · Start here</option>
             <option value="load">Request capacity & cache</option>
             <option value="queue">Queue arithmetic</option>
             <option value="quorum">Quorum thresholds</option>
@@ -135,6 +137,9 @@ export default function Lab() {
         <Tabs value={tab} onValueChange={(v) => openTab(String(v))}>
           <TabsContent value="production" keepMounted>
             <Operations />
+          </TabsContent>
+          <TabsContent value="tour">
+            <LabTour />
           </TabsContent>
           <TabsContent value="load">
             <ExperimentStory

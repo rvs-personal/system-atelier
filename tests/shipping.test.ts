@@ -1,3 +1,10 @@
+import {
+  freshTour,
+  tourReady,
+  tourAction,
+  tourMetrics,
+  restoreTourGateway,
+} from '../src/lib/studio/lab-tour';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parentRoute } from '../src/lib/studio/navigation';
@@ -88,4 +95,46 @@ test('provider credit exhaustion is distinct from outages and rate throttling', 
       .message,
     'Inference HTTP 404',
   );
+});
+
+test('guided café tour gates actions and demonstrates capacity, cost and ingress recovery', () => {
+  let s = freshTour();
+  const untouched = freshTour();
+  assert.equal(tourReady(s), false);
+  assert.equal(tourAction(s, 'lb', 'remove'), s);
+  s = { ...s, inspected: true };
+  assert.equal(tourReady(s), true);
+  s = { ...s, step: 1 };
+  assert.equal(tourReady(s), false);
+  s = { ...s, load: 150 };
+  assert.equal(tourReady(s), true);
+  assert.equal(tourMetrics(s).completed, 100);
+  const baselineBill = tourMetrics(s).bill;
+  s = { ...s, step: 2 };
+  assert.equal(tourReady(s), false);
+  s = tourAction(s, 'api', 'plus');
+  assert.equal(tourReady(s), true);
+  assert.equal(tourMetrics(s).completed, 150);
+  assert.equal(tourMetrics(s).bill, baselineBill + 20);
+  s = { ...s, step: 3 };
+  assert.equal(tourReady(s), false);
+  s = tourAction(s, 'api', 'minus');
+  assert.equal(tourMetrics(s).completed, 100);
+  assert.equal(tourReady(s), false);
+  s = tourAction(s, 'api', 'plus');
+  assert.equal(tourReady(s), true);
+  s = { ...s, step: 4 };
+  assert.equal(tourReady(s), false);
+  s = tourAction(s, 'lb', 'remove');
+  assert.equal(tourMetrics(s).completed, 0);
+  assert.equal(tourReady(s), true);
+  s = { ...s, step: 5 };
+  assert.equal(tourReady(s), false);
+  s = restoreTourGateway(s);
+  assert.equal(tourReady(s), true);
+  assert.equal(tourMetrics(s).completed, 150);
+  assert.equal(restoreTourGateway(s), s);
+  assert.equal(s.design.edges.length, untouched.design.edges.length);
+  assert.deepEqual(freshTour(), untouched);
+  assert.equal(parentRoute('lab/tour'), 'lab');
 });
