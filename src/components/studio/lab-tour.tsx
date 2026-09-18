@@ -216,10 +216,9 @@ export function LabTourInvitation() {
     <a className="tour-invitation" href="#lab/tour">
       <Compass size={25} />
       <div>
-        <strong>New to the lab? Try a guided tour.</strong>
+        <strong>First time? Start with a guided lab.</strong>
         <span>
-          Practice adding, removing and restoring components in a tiny café
-          system.
+          Add capacity, break a connection and restore a café checkout.
         </span>
       </div>
       <span className="tour-start">

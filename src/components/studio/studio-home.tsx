@@ -10,7 +10,8 @@ import {
   Network,
 } from 'lucide-react';
 import { incidents } from '@/lib/studio/operations';
-import { stages, lessons } from '@/lib/studio/curriculum';
+import { lessons } from '@/lib/studio/curriculum';
+import { learningParts, learningModules } from '@/lib/studio/learning-map';
 import './studio-home.css';
 const hops = [
   {
@@ -35,14 +36,7 @@ const hops = [
     code: '{ id: 42, title: "Distributed Systems" }',
   },
 ];
-const outcomes = [
-  'Trace requests and reason about capacity.',
-  'Choose storage, caching and asynchronous work.',
-  'Design contracts, objects and state transitions.',
-  'Handle partial failure and concurrency.',
-  'Plan migrations and multi-region systems.',
-  'Connect architecture to people and economics.',
-];
+
 export default function StudioHome({
   navigate,
   completed,
@@ -354,27 +348,28 @@ export default function StudioHome({
             </button>
           </header>
           <p>
-            <strong>{completed ?? 0}</strong> / {lessons.length} chapters · 6
-            stages
+            <strong>{completed ?? 0}</strong> / {lessons.length} lessons ·{' '}
+            {learningParts.length} parts · {learningModules.length} modules
           </p>
           <div className="overview-stages">
-            {stages.map((s, i) => (
+            {learningParts.map((s, i) => (
               <button
-                key={s.name}
+                key={s.id}
                 className={i === 0 ? 'stage-current' : ''}
-                onClick={() =>
-                  navigate('learn/' + lessons.find((l) => l.stage === i)!.id)
-                }
+                onClick={() => navigate('learn/part/' + s.id)}
               >
                 <span className="overview-stage-number">
                   {String(i + 1).padStart(2, '0')}
                 </span>
                 <span>
-                  <strong>{s.name}</strong>
-                  <small>{outcomes[i]}</small>
+                  <strong>{s.title}</strong>
                   <em>
-                    {lessons.filter((l) => l.stage === i).length} chapters ·{' '}
-                    {i === 0 ? 'Start here' : s.role}
+                    {s.modules.length} modules ·{' '}
+                    {s.modules.reduce(
+                      (total, m) => total + m.lessons.length,
+                      0,
+                    )}{' '}
+                    lessons
                   </em>
                 </span>
                 {i === 0 ? (

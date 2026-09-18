@@ -9,6 +9,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import AuthLanding from './auth-landing';
+import { isPublicWorkspace, safeReturnRoute } from '@/lib/auth/public-access';
 import { download } from '@/lib/studio/storage';
 import { AuthContext as Auth, type User } from '@/lib/auth/context';
 export function AccountMenu() {
@@ -79,6 +80,21 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [showPassword, setShowPassword] = useState(false);
+  const [route, setRoute] = useState('');
+  useEffect(() => {
+    const sync = () => setRoute(location.hash.slice(1));
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+  function returnToWorkspace() {
+    const requested = route.startsWith('signin')
+      ? (new URLSearchParams(route.split('?')[1] ?? '').get('next') ?? 'studio')
+      : route;
+    const next = safeReturnRoute(requested);
+    history.replaceState(null, '', '#' + next);
+    setRoute(next);
+  }
   async function load() {
     setLoading(true);
     try {
@@ -112,8 +128,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         error?: string;
       };
       if (!r.ok) throw Error(d.error);
-      if (!d.recovery && location.hash === '#signin')
-        history.replaceState(null, '', '#studio');
+      if (!d.recovery) returnToWorkspace();
       setUser(d.account);
       setPassword('');
       setRecovery('');
@@ -139,17 +154,20 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         Opening System Atelier…
       </main>
     );
-  if (user && !newRecovery)
+  if (
+    !newRecovery &&
+    (isPublicWorkspace(route) || (user && route.split('/')[0] === 'interview'))
+  )
     return (
-      <Auth.Provider value={{ user, logout }}>
-        <div key={user.id}>
+      <Auth.Provider value={user ? { user, logout } : null}>
+        <div key={user?.id ?? 'guest'}>
           {error && <p role="alert">{error}</p>}
           {children}
         </div>
       </Auth.Provider>
     );
   return (
-    <AuthLanding>
+    <AuthLanding signedIn={!!user} forceSignIn={!!newRecovery || !!route}>
       <div className="entry-form">
         {newRecovery ? (
           <>
@@ -176,8 +194,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             <button
               className="primary wide"
               onClick={() => {
-                if (location.hash === '#signin')
-                  history.replaceState(null, '', '#studio');
+                returnToWorkspace();
                 setNewRecovery('');
               }}
             >
@@ -199,7 +216,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
                 ? 'A place for your notes, designs and interview practice.'
                 : mode === 'recover'
                   ? 'Enter your recovery key and choose a new password.'
-                  : 'Continue learning and open your saved work.'}
+                  : route.includes('interview')
+                    ? 'Sign in to start an AI interview and keep your session history.'
+                    : 'Sign in for AI feedback and saved work across devices.'}
             </p>
             <form onSubmit={submit}>
               <label className="field">

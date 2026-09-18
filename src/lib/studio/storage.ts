@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { guestKey } from '@/lib/auth/public-access';
 import { useAccount } from '@/lib/auth/context';
 const drafts = new Map<string, () => object>();
 export const documentKeys = [
@@ -62,6 +63,26 @@ export function useCloud<T extends object>(key: string, initial: T) {
   const load = useCallback(async () => {
     setStatus('Loading cloud workspace…');
     try {
+      if (!accountId) {
+        let next = initialRef.current;
+        try {
+          const raw = localStorage.getItem(guestKey(key));
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+              next = { ...initialRef.current, ...parsed } as T;
+          }
+        } catch {}
+        latest.current = next;
+        saved.current = JSON.stringify(next);
+        loaded.current = true;
+        dirty.current = false;
+        setData(next);
+        setReady(true);
+        setError('');
+        setStatus('Saved in this browser');
+        return;
+      }
       const r = await fetch('/api/state?key=' + key, {
         headers: { 'X-Atelier-Account': accountId },
       });
@@ -69,11 +90,25 @@ export function useCloud<T extends object>(key: string, initial: T) {
       if (!r.ok) throw Error(value.error ?? 'Could not load cloud workspace.');
       if (mounted.current) {
         revision.current = value.revision;
-        const next = value.data ?? initialRef.current;
+        let next = value.data ?? initialRef.current;
+        if (value.data === null) {
+          try {
+            const raw = localStorage.getItem(guestKey(key));
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (
+                parsed &&
+                typeof parsed === 'object' &&
+                !Array.isArray(parsed)
+              )
+                next = { ...initialRef.current, ...parsed };
+            }
+          } catch {}
+        }
         latest.current = next;
-        saved.current = JSON.stringify(next);
+        saved.current = JSON.stringify(value.data ?? initialRef.current);
         loaded.current = true;
-        dirty.current = false;
+        dirty.current = JSON.stringify(next) !== saved.current;
         setData(next);
         setReady(true);
         setError('');
@@ -96,6 +131,16 @@ export function useCloud<T extends object>(key: string, initial: T) {
     setStatus('Saving…');
     const snapshot = JSON.stringify(latest.current);
     try {
+      if (!accountId) {
+        localStorage.setItem(guestKey(key), snapshot);
+        saved.current = snapshot;
+        dirty.current = JSON.stringify(latest.current) !== snapshot;
+        if (mounted.current) {
+          setError('');
+          setStatus('Saved in this browser');
+        }
+        return;
+      }
       const r = await fetch('/api/state', {
         method: 'PUT',
         headers: {
@@ -138,9 +183,13 @@ export function useCloud<T extends object>(key: string, initial: T) {
     dirty.current = JSON.stringify(data) !== saved.current;
     if (!dirty.current) return;
     setStatus('Unsaved changes');
+    if (!accountId) {
+      void save();
+      return;
+    }
     const timer = setTimeout(() => void save(), 650);
     return () => clearTimeout(timer);
-  }, [data, ready, save]);
+  }, [data, ready, save, accountId]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (dirty.current && !busy.current && !error) void save();

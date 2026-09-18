@@ -17,9 +17,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
+import { signInHref } from '@/lib/auth/public-access';
 import { useAccount } from '@/lib/auth/context';
 import { useCloud, exportWorkspace } from '@/lib/studio/storage';
 import { lessons } from '@/lib/studio/curriculum';
+import { learningModules } from '@/lib/studio/learning-map';
 import { CloudStatus } from './shared';
 type Entry = { title: string; route: string; text: string; updatedAt: string };
 export default function WorkspaceTools({ view }: { view: string }) {
@@ -49,11 +51,11 @@ export default function WorkspaceTools({ view }: { view: string }) {
   useEffect(() => {
     const sync = () => setRoute(location.hash || '#studio');
     sync();
-    const t = setInterval(sync, 500);
+    window.addEventListener('hashchange', sync);
     const receive = (e: Event) => setContext((e as CustomEvent<string>).detail);
     window.addEventListener('atelier-context', receive);
     return () => {
-      clearInterval(t);
+      window.removeEventListener('hashchange', sync);
       window.removeEventListener('atelier-context', receive);
     };
   }, []);
@@ -61,6 +63,7 @@ export default function WorkspaceTools({ view }: { view: string }) {
     lesson = lessons.find((l) => route === '#learn/' + l.id);
   const title =
     lesson?.title ??
+    learningModules.find((m) => route === '#learn/module/' + m.id)?.title ??
     (section === 'lab' && context
       ? context
       : ({
@@ -85,66 +88,72 @@ export default function WorkspaceTools({ view }: { view: string }) {
         >
           {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
         </button>
-        <Sheet>
-          <SheetTrigger
-            className="profile-trigger"
-            aria-label="Profile and workspace"
-          >
-            <span className="profile-avatar">
-              {account?.user.username.slice(0, 1).toUpperCase() ?? (
-                <UserRound size={16} />
-              )}
-            </span>
-            <span>{account?.user.username}</span>
-          </SheetTrigger>
-          <SheetContent className="workspace-sheet">
-            <SheetHeader>
-              <SheetTitle>Your profile</SheetTitle>
-              <SheetDescription>
-                Account, notes and saved work.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="workspace-menu-body">
-              <div className="profile-summary">
-                <span className="profile-avatar">
-                  {account?.user.username.slice(0, 1).toUpperCase()}
-                </span>
-                <div>
-                  <strong>{account?.user.username}</strong>
-                  <span>Signed in · System Atelier</span>
+        {!account ? (
+          <a className="guest-signin" href={signInHref(route)}>
+            Sign in
+          </a>
+        ) : (
+          <Sheet>
+            <SheetTrigger
+              className="profile-trigger"
+              aria-label="Profile and workspace"
+            >
+              <span className="profile-avatar">
+                {account?.user.username.slice(0, 1).toUpperCase() ?? (
+                  <UserRound size={16} />
+                )}
+              </span>
+              <span>{account?.user.username}</span>
+            </SheetTrigger>
+            <SheetContent className="workspace-sheet">
+              <SheetHeader>
+                <SheetTitle>Your profile</SheetTitle>
+                <SheetDescription>
+                  Account, notes and saved work.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="workspace-menu-body">
+                <div className="profile-summary">
+                  <span className="profile-avatar">
+                    {account?.user.username.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div>
+                    <strong>{account?.user.username}</strong>
+                    <span>Signed in · System Atelier</span>
+                  </div>
                 </div>
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={async () => {
+                    if (!account) return;
+                    setBusy(true);
+                    setError('');
+                    try {
+                      await exportWorkspace(account.user.id);
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <Download size={16} />
+                  {busy ? 'Preparing export…' : 'Export workspace'}
+                </button>
+                <p>
+                  Includes notes, learning progress, designs, decisions, and
+                  interview history.
+                </p>
+                {error && <p role="alert">{error}</p>}
+                <button className="text-button" onClick={account?.logout}>
+                  <LogOut size={16} />
+                  Sign out
+                </button>
               </div>
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={async () => {
-                  if (!account) return;
-                  setBusy(true);
-                  setError('');
-                  try {
-                    await exportWorkspace(account.user.id);
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <Download size={16} />
-                {busy ? 'Preparing export…' : 'Export workspace'}
-              </button>
-              <p>
-                Includes notes, learning progress, designs, decisions, and
-                interview history.
-              </p>
-              {error && <p role="alert">{error}</p>}
-              <button className="text-button" onClick={account?.logout}>
-                <LogOut size={16} />
-                Sign out
-              </button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
       <Sheet
         open={open}
@@ -188,6 +197,12 @@ export default function WorkspaceTools({ view }: { view: string }) {
                 }));
               }}
             />
+            {!account && (
+              <p className="guest-note">
+                Notes and practice are saved in this browser. Clearing browser
+                data removes them.
+              </p>
+            )}
             <CloudStatus {...cloud} />
             <h3>Notes by page</h3>
             <button className="note-link" onClick={() => setSelected(null)}>

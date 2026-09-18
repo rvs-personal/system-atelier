@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { parentRoute } from '@/lib/studio/navigation';
+import { learningModules, learningParts } from '@/lib/studio/learning-map';
 import { lessons } from '@/lib/studio/curriculum';
 import { lldLibrary } from '@/lib/studio/lld-library';
 import { incidents } from '@/lib/studio/operations';
@@ -35,6 +36,12 @@ export default function WorkspaceNavigation() {
   const parts = route.split('/'),
     parent = parentRoute(route);
   function label(part: string, i: number) {
+    if (parts[0] === 'learn' && part === 'orientation') return 'Orientation';
+    if (parts[0] === 'learn' && part === 'part') return 'Parts';
+    if (parts[0] === 'learn' && parts[1] === 'part' && i === 2) return learningParts.find(p=>p.id===part)?.title ?? 'Part';
+    if (parts[0] === 'learn' && ['module', 'part'].includes(part)) return 'Modules';
+    if (parts[0] === 'learn' && i === 2)
+      return learningModules.find((m) => m.id === part)?.title ?? 'Module';
     if (parts[0] === 'learn' && i === 1)
       return lessons.find((l) => l.id === part)?.title ?? 'Lesson';
     if (parts[0] === 'lab' && i === 1)
@@ -75,7 +82,13 @@ export default function WorkspaceNavigation() {
             {i === parts.length - 1 ? (
               <span aria-current="page">{label(part, i)}</span>
             ) : (
-              <a href={'#' + parts.slice(0, i + 1).join('/')}>
+              <a
+                href={
+                  ['module', 'part'].includes(part)
+                    ? '#learn'
+                    : '#' + parts.slice(0, i + 1).join('/')
+                }
+              >
                 {label(part, i)}
               </a>
             )}

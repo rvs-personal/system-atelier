@@ -26,7 +26,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { stages, lessons } from '@/lib/studio/curriculum';
+import { lessons } from '@/lib/studio/curriculum';
 import { initialDesign } from '@/lib/studio/model';
 import Diagram from '@/components/studio/diagram';
 import StudioHome from '@/components/studio/studio-home';
@@ -36,6 +36,9 @@ import LLD from '@/components/studio/lld';
 import Interview from '@/components/studio/interview';
 import WorkspaceNavigation from '@/components/studio/workspace-navigation';
 import WorkspaceTools from '@/components/studio/workspace-tools';
+import { useAccount } from '@/lib/auth/context';
+import { learningParts, learningModules } from '@/lib/studio/learning-map';
+import { guestKey } from '@/lib/auth/public-access';
 import { incidents } from '@/lib/studio/operations';
 import AuthGate, { AccountMenu } from '@/components/studio/auth';
 const navigation = [
@@ -57,10 +60,21 @@ export default function Home() {
   );
 }
 function App() {
+  const account = useAccount();
   const [view, setView] = useState('studio'),
+    [learningRoute, setLearningRoute] = useState(''),
     [visited, setVisited] = useState<string[]>(['studio']),
     [completed, setCompleted] = useState<number | null>(null);
   const { setOpenMobile } = useSidebar();
+  const [, learningKind, learningId] = learningRoute.split('/');
+  const activePart =
+    learningKind === 'part'
+      ? learningId
+      : learningModules.find((m) =>
+          learningKind === 'module'
+            ? m.id === learningId
+            : m.lessons.includes(learningKind),
+        )?.partId;
   function navigate(route: string) {
     const id = route.split('/')[0];
     if (!navigation.some((n) => n.id === id)) return;
@@ -72,7 +86,9 @@ function App() {
   }
   useEffect(() => {
     const route = () => {
-      const id = window.location.hash.slice(1).split('/')[0];
+      const hash = window.location.hash.slice(1);
+      setLearningRoute(hash);
+      const id = hash.split('/')[0];
       if (navigation.some((n) => n.id === id)) {
         setView(id);
         setVisited((v) => (v.includes(id) ? v : [...v, id]));
@@ -84,6 +100,17 @@ function App() {
     return () => window.removeEventListener('hashchange', route);
   }, []);
   useEffect(() => {
+    if (!account) {
+      try {
+        setCompleted(
+          JSON.parse(localStorage.getItem(guestKey('progress')) ?? '{}')
+            .completed?.length ?? 0,
+        );
+      } catch {
+        setCompleted(0);
+      }
+      return;
+    }
     if (view === 'studio')
       fetch('/api/state?key=progress')
         .then((r) =>
@@ -93,7 +120,7 @@ function App() {
         )
         .then((d) => setCompleted(d ? (d.data?.completed?.length ?? 0) : null))
         .catch(() => setCompleted(null));
-  }, [view]);
+  }, [view, account]);
   useEffect(() => {
     const context = (
       document as Document & {
@@ -143,7 +170,7 @@ function App() {
   }, []);
   return (
     <>
-      <Sidebar>
+      <Sidebar className={view === 'learn' ? 'course-sidebar' : undefined}>
         <SidebarHeader>
           <a
             href="#studio"
@@ -157,7 +184,7 @@ function App() {
           </a>
         </SidebarHeader>
         <SidebarContent>
-          <div className="nav-label">YOUR WORKSPACE</div>
+          <div className="nav-label">EXPLORE SYSTEM DESIGN</div>
           <SidebarMenu>
             {navigation.map(({ id, label, icon: Icon }) => (
               <SidebarMenuItem key={id}>
@@ -172,6 +199,25 @@ function App() {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
+          {view === 'learn' && (
+            <nav className="course-outline" aria-label="Learning path parts">
+              <span>COURSE OUTLINE</span>
+              {learningParts.map((part, i) => (
+                <a
+                  key={part.id}
+                  href={'#learn/part/' + part.id}
+                  aria-current={activePart === part.id ? 'page' : undefined}
+                  onClick={() => setOpenMobile(false)}
+                >
+                  <small>{String(i + 1).padStart(2, '0')}</small>
+                  {part.title}
+                </a>
+              ))}
+            </nav>
+          )}
+          <a className="sidebar-overview-link" href="/">
+            About System Atelier <ArrowUpRight size={14} />
+          </a>
         </SidebarContent>
       </Sidebar>
       <main

@@ -4,11 +4,11 @@ A workspace for learning system design, investigating production failures, pract
 
 ## What is included
 
-- **Learning:** 108 chapters with diagrams, worked examples and knowledge checks.
+- **Learning:** 10 ordered parts, 36 modules and 108 lessons with diagrams, worked examples and knowledge checks.
 - **Architecture lab:** 22 incident families with variations, editable systems and customer-impact feedback.
 - **LLD:** 15 worked designs, coding practice and four interactive workbenches.
 - **Interviews:** mock and guided sessions, a shared canvas, saved sessions and debriefs.
-- **Workspace:** account-scoped notes, drafts and progress.
+- **Workspace:** browser-saved practice for guests; account-scoped notes, drafts and progress after sign-in.
 
 Model reviews are optional. The app works for learning and saved practice without model credentials. Code reviews provide feedback; they do not execute or compile submitted code.
 

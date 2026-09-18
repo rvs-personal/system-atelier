@@ -1,4 +1,5 @@
 'use client';
+import IncidentEvidence from './incident-evidence';
 import { LabTourInvitation } from './lab-tour';
 import { useEffect, useState } from 'react';
 import {
@@ -256,6 +257,7 @@ export default function Operations() {
                 </span>
                 <h3>{c.title}</h3>
                 <p>{c.complaint}</p>
+                <IncidentEvidence index={i} />
                 <span className="case-action">
                   <span className="sr-only">Open incident</span>
                   <ArrowRight size={18} />
@@ -338,10 +340,15 @@ export default function Operations() {
                 <p>Target &lt; {d.config.latencyTarget} ms</p>
               </div>
               <div className={m.queueDelay >= 60 ? 'bad' : ''}>
-                <span>Waiting notifications</span>
+                <span>Backlog at {Math.round(d.seconds)} s</span>
                 <strong>{Math.round(d.backlog).toLocaleString()}</strong>
                 <p>
                   {m.workerCapacity}/s processing · {m.jobRate}/s arriving
+                  {!d.running && (
+                    <small className="clock-snapshot">
+                      Clock paused · advance time to observe accumulation
+                    </small>
+                  )}
                 </p>
               </div>
               <div className={m.bill > d.config.budget ? 'bad' : ''}>

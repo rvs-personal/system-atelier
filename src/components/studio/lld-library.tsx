@@ -1,11 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, BookOpen, Code2, Play } from 'lucide-react';
 import { lldLibrary, lldReferences } from '@/lib/studio/lld-library';
 import { useCloud } from '@/lib/studio/storage';
+import { signInHref } from '@/lib/auth/public-access';
 import { useAccount } from '@/lib/auth/context';
 import { CloudStatus } from './shared';
 import './lld-library.css';
+import DesignTrace from './design-trace';
 type Review = {
   summary: string;
   findings: {
@@ -38,6 +40,26 @@ export default function LLDLibrary({
     area = selectedArea ?? 'reading',
     exercise = lldLibrary.find((c) => c.id === id);
   const auth = useAccount();
+  const [pendingDraft, setPendingDraft] = useState<Draft | null>(null);
+  useEffect(() => {
+    setPendingDraft(null);
+    if (!auth || !exercise || !cloud.ready) return;
+    try {
+      const pending = JSON.parse(
+        sessionStorage.getItem('atelier-review-draft') ?? 'null',
+      );
+      if (
+        pending?.caseId === exercise.id &&
+        typeof pending.draft?.code === 'string' &&
+        typeof pending.draft?.contract === 'string' &&
+        typeof pending.draft?.language === 'string'
+      ) {
+        if (pending.draft.code !== cloud.data.drafts[exercise.id]?.code)
+          setPendingDraft(pending.draft);
+        else sessionStorage.removeItem('atelier-review-draft');
+      }
+    } catch {}
+  }, [auth, exercise, cloud.ready, cloud.data.drafts]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [filter, setFilter] = useState('');
@@ -57,6 +79,15 @@ export default function LLDLibrary({
   }
   async function review() {
     if (!exercise || !draft) return;
+    if (!auth) {
+      await cloud.save();
+      sessionStorage.setItem(
+        'atelier-review-draft',
+        JSON.stringify({ caseId: exercise.id, draft }),
+      );
+      window.location.hash = signInHref(window.location.hash);
+      return;
+    }
     setBusy(true);
     setError('');
     const submitted = { ...draft },
@@ -121,11 +152,8 @@ export default function LLDLibrary({
     return (
       <section className="lld-library">
         <header>
-          <span className="eyebrow">LOW-LEVEL DESIGN</span>
           <h1>
-            {area === 'practice'
-              ? 'Write the implementation.'
-              : 'Understand the design.'}
+            {area === 'practice' ? 'LLD coding practice' : 'Low-level design'}
           </h1>
           <p>
             {area === 'practice'
@@ -142,35 +170,81 @@ export default function LLDLibrary({
             placeholder="Search by system or concept…"
           />
         </label>
-        <div className="lld-library-grid">
-          {lldLibrary
-            .filter((c) =>
-              (c.name + ' ' + c.category + ' ' + c.brief)
-                .toLowerCase()
-                .includes(filter.toLowerCase()),
-            )
-            .map((c, i) => (
-              <a
-                className="lld-learning-card"
-                href={
-                  '#lld/' +
-                  (area === 'practice' ? 'practice' : 'reading') +
-                  '/' +
-                  c.id
-                }
-                key={c.id}
-              >
-                <span className="eyebrow">
-                  {String(i + 1).padStart(2, '0')} / {c.category}
-                </span>
-                <h2>{c.name}</h2>
-                <p>{c.brief}</p>
-                <span className="lld-card-action">
-                  {area === 'practice' ? 'Write code' : 'Read design'}
-                  <ArrowRight size={17} />
-                </span>
-              </a>
-            ))}
+        <div className="lld-catalogue">
+          {[
+            {
+              title: 'Data structures & resources',
+              detail: 'Start with a bounded resource and a precise contract.',
+              ids: ['lru', 'bucket', 'connection-pool', 'filesystem'],
+            },
+            {
+              title: 'Domain models & state',
+              detail: 'Make ownership and legal transitions explicit.',
+              ids: ['parking', 'order', 'vending', 'library', 'chess'],
+            },
+            {
+              title: 'Events & responsibilities',
+              detail: 'Separate policy, delivery and object lifetimes.',
+              ids: ['pubsub', 'logging', 'elevator'],
+            },
+            {
+              title: 'Coordination & invariants',
+              detail: 'Keep the promise when operations overlap or repeat.',
+              ids: ['split-expense', 'scheduler', 'reservation'],
+            },
+          ].map((group) => {
+            const entries = group.ids
+              .map((id) => lldLibrary.find((c) => c.id === id)!)
+              .filter((c) =>
+                (c.name + ' ' + c.category + ' ' + c.brief)
+                  .toLowerCase()
+                  .includes(filter.toLowerCase()),
+              );
+            if (!entries.length) return null;
+            return (
+              <section className="lld-design-group" key={group.title}>
+                <header>
+                  <h2>{group.title}</h2>
+                  <p>{group.detail}</p>
+                  <span>{entries.length} designs</span>
+                </header>
+                <div className="lld-group-entries">
+                  {entries.map((c) => (
+                    <a
+                      className="lld-design-entry"
+                      key={c.id}
+                      href={
+                        '#lld/' +
+                        (area === 'practice' ? 'practice' : 'reading') +
+                        '/' +
+                        c.id
+                      }
+                    >
+                      <DesignTrace id={c.id} />
+                      <div className="lld-design-summary">
+                        <span className="eyebrow">{c.category}</span>
+                        <h3>{c.name}</h3>
+                        <p>{c.brief}</p>
+                        <span className="lld-card-action">
+                          {area === 'practice' ? 'Write code' : 'Read design'}
+                          <ArrowRight size={17} />
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+          {!lldLibrary.some((c) =>
+            (c.name + ' ' + c.category + ' ' + c.brief)
+              .toLowerCase()
+              .includes(filter.toLowerCase()),
+          ) && (
+            <p role="status">
+              No designs match. Try “cache”, “state” or “ownership”.
+            </p>
+          )}
         </div>
       </section>
     );
@@ -185,6 +259,33 @@ export default function LLDLibrary({
       {area === 'practice' ? (
         <>
           <CloudStatus {...cloud} />
+          {pendingDraft && (
+            <div className="explain">
+              <p>
+                You have a practice draft from before sign-in. Your saved
+                account version is shown below.
+              </p>
+              <button
+                className="secondary"
+                onClick={() => {
+                  update(pendingDraft);
+                  setPendingDraft(null);
+                  sessionStorage.removeItem('atelier-review-draft');
+                }}
+              >
+                Use my browser draft
+              </button>
+              <button
+                className="text-button"
+                onClick={() => {
+                  setPendingDraft(null);
+                  sessionStorage.removeItem('atelier-review-draft');
+                }}
+              >
+                Keep account version
+              </button>
+            </div>
+          )}
           <div className="lld-coding-grid">
             <section>
               <label className="field">
@@ -233,7 +334,11 @@ export default function LLDLibrary({
                 }
                 onClick={review}
               >
-                {busy ? 'Reviewing your implementation…' : 'Review my code'}
+                {busy
+                  ? 'Reviewing your implementation…'
+                  : auth
+                    ? 'Review my code'
+                    : 'Sign in for AI review'}
                 <ArrowRight size={16} />
               </button>
               <p className="small">
@@ -324,6 +429,12 @@ export default function LLDLibrary({
                 </span>
                 <h2>{section.title}</h2>
                 <p>{section.text}</p>
+                {exercise.id === 'lru' && i === 0 && (
+                  <p className="trace-reading-caption">
+                    Trace notation: [most recent → least recent]. Reading A
+                    moves it to the front; adding C then evicts B.
+                  </p>
+                )}
                 <pre>{section.code}</pre>
               </section>
             ))}

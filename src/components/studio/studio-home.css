@@ -648,3 +648,9 @@ html[data-theme='dark'] .route-caption {
     font-size: 13px;
   }
 }
+.overview-stages > button {
+  padding-block: 14px;
+}
+.overview-stages em {
+  margin-top: 4px;
+}

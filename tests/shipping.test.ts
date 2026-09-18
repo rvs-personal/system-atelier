@@ -18,6 +18,8 @@ import {
 } from '../src/lib/inference/policy';
 test('contextual back paths do not trap incidents or expose raw history IDs', () => {
   assert.equal(parentRoute('learn/request'), 'learn');
+  assert.equal(parentRoute('learn/part/requests'), 'learn');
+  assert.equal(parentRoute('learn/module/frame'), 'learn');
   assert.equal(parentRoute('lld/practice/lru'), 'lld/practice');
   assert.equal(parentRoute('lld/lru'), 'lld/simulations');
   assert.equal(parentRoute('lab/0/1'), 'lab');
@@ -137,4 +139,78 @@ test('guided café tour gates actions and demonstrates capacity, cost and ingres
   assert.equal(s.design.edges.length, untouched.design.edges.length);
   assert.deepEqual(freshTour(), untouched);
   assert.equal(parentRoute('lab/tour'), 'lab');
+});
+
+void test('learning modules preserve every lesson exactly once and all dependencies resolve earlier', async () => {
+  const { learningModules, orderedLessons } =
+    await import('../src/lib/studio/learning-map');
+  const { lessons } = await import('../src/lib/studio/curriculum');
+  const { incidents } = await import('../src/lib/studio/operations');
+  const ids = orderedLessons.map((l) => l.id);
+  assert.equal(new Set(ids).size, lessons.length);
+  assert.deepEqual([...ids].sort(), lessons.map((l) => l.id).sort());
+  for (const [index, module] of learningModules.entries()) {
+    for (const prerequisite of module.requires) {
+      const preceding = learningModules.findIndex((m) => m.id === prerequisite);
+      assert.ok(
+        preceding >= 0 && preceding < index,
+        `${module.id}: ${prerequisite}`,
+      );
+    }
+    const [area, target, caseId] = module.practice.split('/');
+    if (area === 'learn')
+      assert.ok(
+        lessons.some((l) => l.id === target),
+        module.practice,
+      );
+    else if (area === 'lab')
+      assert.ok(
+        !target ||
+          ['tour', 'load', 'queue', 'quorum', 'estimate'].includes(target) ||
+          incidents[Number(target)],
+        module.practice,
+      );
+    else if (area === 'lld')
+      assert.ok(
+        (['reading', 'practice', 'simulations'].includes(target) && !caseId) ||
+          lldLibrary.some((c) => c.id === caseId),
+        module.practice,
+      );
+    else assert.fail(`Unknown practice route: ${module.practice}`);
+  }
+});
+
+void test('guest workspace routing opens learning and building but never treats interview or auth as public', async () => {
+  const { isPublicWorkspace, safeReturnRoute, signInHref, guestKey } =
+    await import('../src/lib/auth/public-access');
+  for (const route of [
+    'learn',
+    'learn/module/frame',
+    '#learn/request',
+    'lab/tour',
+    'lld/practice/lru',
+  ])
+    assert.equal(isPublicWorkspace(route), true, route);
+  for (const route of [
+    'interview',
+    'interview/session',
+    'signin',
+    'api/state',
+    'profile',
+  ])
+    assert.equal(isPublicWorkspace(route), false, route);
+  for (const route of [
+    'https://evil.example',
+    '//evil.example',
+    'learn/../../api',
+    'javascript:alert(1)',
+    'signin?next=interview',
+  ])
+    assert.equal(safeReturnRoute(route), 'studio', route);
+  assert.equal(
+    signInHref('#lld/practice/lru'),
+    '#signin?next=lld%2Fpractice%2Flru',
+  );
+  assert.equal(safeReturnRoute('#interview/history'), 'interview/history');
+  assert.notEqual(guestKey('progress'), 'progress');
 });
