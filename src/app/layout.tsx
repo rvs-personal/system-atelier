@@ -4,6 +4,7 @@ import './globals.css';
 import './workspace.css';
 import './explorer.css';
 import './refinement.css';
+import './palette.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

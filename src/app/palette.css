@@ -1,0 +1,176 @@
+/* Shared visual tokens: instructional diagrams and UI use the same theme. */
+html {
+  --atelier-bg: #f6f7fa;
+  --atelier-panel: #ffffff;
+  --atelier-soft: #edf2fa;
+  --atelier-ink: #243247;
+  --atelier-muted: #586a80;
+  --atelier-line: #ccd7e6;
+  --atelier-blue: #345eb8;
+  --atelier-on-blue: #ffffff;
+  --atelier-node: #e7eef9;
+  --atelier-edge: #657f9f;
+  --atelier-warning: #92551f;
+  --atelier-warning-bg: #fff1dd;
+  --atelier-danger: #a33e48;
+  --atelier-danger-bg: #fbe9ec;
+}
+html[data-theme='dark'] {
+  --atelier-bg: #111923;
+  --atelier-panel: #192535;
+  --atelier-soft: #223249;
+  --atelier-ink: #e6edf8;
+  --atelier-muted: #b0bfd2;
+  --atelier-line: #3b506b;
+  --atelier-blue: #a4c1ff;
+  --atelier-on-blue: #142440;
+  --atelier-node: #253a55;
+  --atelier-edge: #91a9ca;
+  --atelier-warning: #f1bd83;
+  --atelier-warning-bg: #3b2c20;
+  --atelier-danger: #ffb5bf;
+  --atelier-danger-bg: #422a35;
+}
+html[data-theme], html:not([data-theme]) {
+  --background: var(--atelier-bg);
+  --foreground: var(--atelier-ink);
+  --card: var(--atelier-panel);
+  --card-foreground: var(--atelier-ink);
+  --popover: var(--atelier-panel);
+  --popover-foreground: var(--atelier-ink);
+  --primary: var(--atelier-blue);
+  --primary-foreground: var(--atelier-on-blue);
+  --secondary: var(--atelier-soft);
+  --secondary-foreground: var(--atelier-ink);
+  --muted: var(--atelier-soft);
+  --muted-foreground: var(--atelier-muted);
+  --accent: var(--atelier-soft);
+  --accent-foreground: var(--atelier-blue);
+  --border: var(--atelier-line);
+  --input: var(--atelier-line);
+  --ring: var(--atelier-blue);
+  --destructive: var(--atelier-danger);
+}
+html:is([data-theme], :not([data-theme])) body .public-overview {
+  --paper: var(--atelier-bg); --sheet: var(--atelier-panel);
+  --ink: var(--atelier-ink); --quiet: var(--atelier-muted);
+  --line: var(--atelier-line); --blue: var(--atelier-blue);
+}
+html:is([data-theme], :not([data-theme])) body .studio-overview {
+  --ov-text: var(--atelier-ink); --ov-muted: var(--atelier-muted);
+  --ov-line: var(--atelier-line); --ov-panel: var(--atelier-panel);
+  --ov-subtle: var(--atelier-soft); --ov-accent: var(--atelier-blue);
+}
+html:is([data-theme], :not([data-theme])) body .interview-entry {
+  --iv-text: var(--atelier-ink); --iv-muted: var(--atelier-muted);
+  --iv-line: var(--atelier-line); --iv-surface: var(--atelier-panel);
+  --iv-selected: var(--atelier-soft);
+}
+html:is([data-theme], :not([data-theme])) body .lld-motion {
+  --scene: var(--atelier-panel); --glass: var(--atelier-soft);
+  --accent: var(--atelier-blue); --ink: var(--atelier-ink);
+  --muted: var(--atelier-muted); --line: var(--atelier-line);
+}
+html:is([data-theme], :not([data-theme])) body .cache-world {
+  --entry-face: var(--atelier-node); --entry-side: var(--atelier-soft);
+  --entry-selected: var(--atelier-soft); --entry-line: var(--atelier-edge);
+}
+html:is([data-theme], :not([data-theme])) body :is(.learning-workspace, .workspace) {
+  --paper: var(--atelier-bg); --ink: var(--atelier-ink);
+  background-color: var(--atelier-bg) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page :is(.mechanism-playground, .chapter-checkpoint, .worked-calculation,
+  .chapter-case, .diagnosis-reading, .experiment-visual, .control-panel,
+  .queue-flow > div, .replica:not(.offline), .cache-slot) {
+  background: var(--atelier-panel) !important;
+  border-color: var(--atelier-line) !important;
+  color: var(--atelier-ink) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page :is(.playground-actions, .assumptions, .model-assumptions) {
+  background: var(--atelier-soft) !important;
+  border-color: var(--atelier-line) !important;
+  color: var(--atelier-ink) !important;
+}
+html:is([data-theme], :not([data-theme])) body .playground-actions button {
+  background: var(--atelier-blue); color: var(--atelier-on-blue);
+}
+html:is([data-theme], :not([data-theme])) body :is(.playground-actions, .delivery-toggle) input { accent-color: var(--atelier-blue); }
+html:is([data-theme], :not([data-theme])) body :is(.mechanism-explanations, .case-evidence) article {
+  border-color: var(--atelier-blue);
+}
+html:is([data-theme], :not([data-theme])) body :is(.mechanism-log, .mechanism-log p) { border-color: var(--atelier-line); }
+html:is([data-theme], :not([data-theme])) body :is(.mechanism-log span, .case-evidence span) { color: var(--atelier-muted); }
+html:is([data-theme], :not([data-theme])) body .diagram {
+  background-color: var(--atelier-panel) !important;
+  background-image: radial-gradient(color-mix(in srgb, var(--atelier-edge) 28%, transparent) .8px, transparent .8px) !important;
+  border-color: var(--atelier-line) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram :is(.diagram-corner, .diagram-status, .diagram-controls > span) {
+  color: var(--atelier-muted) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .diagram-controls {
+  background: var(--atelier-soft) !important; border-color: var(--atelier-line) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .diagram-controls button {
+  background: var(--atelier-panel) !important; color: var(--atelier-ink) !important; border-color: var(--atelier-line) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node > :is(path, polygon, ellipse) {
+  fill: var(--atelier-node) !important; stroke: var(--atelier-edge) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node > text { fill: var(--atelier-ink) !important; }
+html:is([data-theme], :not([data-theme])) body .diagram .node[data-kind='cache'] > :is(path, polygon, ellipse) {
+  stroke: var(--atelier-blue) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node[data-state='hot'] > :is(path, polygon, ellipse) {
+  fill: var(--atelier-warning-bg) !important; stroke: var(--atelier-warning) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node[data-state='hot'] > text { fill: var(--atelier-warning) !important; }
+html:is([data-theme], :not([data-theme])) body .diagram .node[role='button']:is(:hover, :focus-visible) > :is(path, polygon, ellipse) {
+  stroke: var(--atelier-blue) !important;
+}
+html:is([data-theme], :not([data-theme])) body .diagram .edge path { stroke: var(--atelier-edge); }
+html:is([data-theme], :not([data-theme])) body .diagram .edge polygon { fill: var(--atelier-edge); stroke: var(--atelier-edge); }
+html:is([data-theme], :not([data-theme])) body .diagram .edge text { fill: var(--atelier-muted); }
+html:is([data-theme], :not([data-theme])) body .diagram .node-action rect {
+  fill: var(--atelier-soft); stroke: var(--atelier-edge);
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node-action text { fill: var(--atelier-blue); }
+html:is([data-theme], :not([data-theme])) body .diagram .node-action-remove rect {
+  fill: var(--atelier-danger-bg); stroke: var(--atelier-danger);
+}
+html:is([data-theme], :not([data-theme])) body .diagram .node-action-remove text { fill: var(--atelier-danger); }
+html:is([data-theme], :not([data-theme])) body .diagram .node-action:is(:hover, :focus-visible) rect { stroke: var(--atelier-blue); }
+html:is([data-theme], :not([data-theme])) body .page :is(.failure-case, .replica.offline, .queue-backlog.overloaded) {
+  background: var(--atelier-warning-bg) !important;
+  border-color: var(--atelier-warning) !important;
+  color: var(--atelier-warning) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page :is(.lesson-code, .trace-explanation, .lesson-step-nav button) {
+  background: var(--atelier-soft) !important; color: var(--atelier-ink) !important;
+  border-color: var(--atelier-line) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page .lesson-step-nav button.active {
+  background: var(--atelier-blue) !important; color: var(--atelier-on-blue) !important;
+  border-color: var(--atelier-blue) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page .trace-explanation.failure {
+  background: var(--atelier-warning-bg) !important; border-color: var(--atelier-warning) !important;
+}
+html:is([data-theme], :not([data-theme])) body .page :is(.source-reading > a, .case-evidence span) { color: var(--atelier-blue); }
+html:is([data-theme], :not([data-theme])) body .lesson-diagram { background: var(--atelier-panel); }
+html:is([data-theme], :not([data-theme])) body .public-overview .hero-study:not([data-busy='true']) #node-handler :is(path, polygon) {
+  fill: var(--atelier-node) !important; stroke: var(--atelier-blue) !important;
+}
+html:is([data-theme], :not([data-theme])) body .public-overview .hero-study:not([data-busy='true']) #node-handler text {
+  fill: var(--atelier-ink) !important;
+}
+html:is([data-theme], :not([data-theme])) body .lld-entry-page {
+  --entry-ink: var(--atelier-ink); --entry-muted: var(--atelier-muted);
+  --entry-border: var(--atelier-line); --entry-surface: var(--atelier-panel);
+  --entry-accent: var(--atelier-blue); --entry-object: var(--atelier-node);
+}
+html:is([data-theme], :not([data-theme])) body .workbench-nav button[aria-current] {
+  background: var(--atelier-soft) !important;
+  color: var(--atelier-blue) !important;
+  box-shadow: inset 0 -3px var(--atelier-blue) !important;
+}

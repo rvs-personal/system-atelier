@@ -49,6 +49,8 @@ export default function Diagram({
         );
         for (const node of design.nodes) {
           const g = svg.querySelector('[id="node-' + node.id + '"]');
+          g?.setAttribute('data-kind', node.kind);
+          g?.setAttribute('data-state', hot.includes(node.id) ? 'hot' : 'normal');
           if (g && selectable) {
             g.setAttribute('tabindex', '0');
             g.setAttribute('role', 'button');
